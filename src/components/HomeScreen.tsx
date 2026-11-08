@@ -1,11 +1,13 @@
 import { Sparkles, Shuffle, Landmark, BookOpen, Calculator, Globe, Play, ChevronRight, type LucideIcon } from 'lucide-react';
-import type { Subject, SubjectId, QuizResultRecord } from '@/types';
+import type { Subject, SubjectId, QuizResultRecord, QuestionCount } from '@/types';
 import ProgressPanel from '@/components/ProgressPanel';
 
 interface Props {
   subjects: Subject[];
   selectedSubject: SubjectId | null;
   selectedTopic: string | null;
+  questionCount: QuestionCount;
+  setQuestionCount: (count: QuestionCount) => void;
   onSelectSubject: (id: SubjectId) => void;
   onSelectTopic: (topic: string | null) => void;
   onStart: () => void;
@@ -123,11 +125,31 @@ export default function HomeScreen({
         Випадковий експрес-спринт (3 питання)
       </button>
 
+      {/* Question count selector */}
+      <div className="mt-6">
+        <p className="mb-2 text-sm font-bold text-slate-400 text-center">Скільки питань?</p>
+        <div className="flex justify-center gap-2">
+          {[3, 5, 10].map((n) => (
+            <button
+              key={n}
+              onClick={() => setQuestionCount(n as QuestionCount)}
+              className={`rounded-xl px-5 py-2.5 text-sm font-bold transition active:scale-95 ${
+                questionCount === n
+                  ? 'bg-gradient-to-r from-brand-cyan to-brand-purple text-white shadow-lg shadow-cyan-500/30'
+                  : 'bg-slate-800 border border-slate-700 text-slate-300 hover:border-brand-cyan hover:bg-slate-700'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Start */}
       <button
         disabled={!activeSubject}
         onClick={onStart}
-        className={`mt-6 flex items-center justify-center gap-2 rounded-2xl px-6 py-5 text-lg font-extrabold transition active:scale-95 ${
+        className={`mt-4 flex items-center justify-center gap-2 rounded-2xl px-6 py-5 text-lg font-extrabold transition active:scale-95 ${
           activeSubject
             ? 'bg-gradient-to-r from-brand-cyan to-brand-purple text-white shadow-xl shadow-cyan-500/30 hover:opacity-90'
             : 'cursor-not-allowed bg-slate-200 text-slate-400'

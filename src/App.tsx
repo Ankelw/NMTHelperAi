@@ -8,9 +8,7 @@ import ErrorScreen from '@/components/ErrorScreen';
 import { SUBJECTS, getQuestionsFor, getRandomSprint } from '@/questions';
 import { loadSettings } from '@/openrouter';
 import { saveProgress, getRecentResults, getStreak, createRecord } from '@/progress';
-import type { OpenRouterSettings, Question, Screen, SubjectId, Mode, QuizResultRecord } from '@/types';
-
-const QUESTIONS_PER_SPRINT = 3;
+import type { OpenRouterSettings, Question, Screen, SubjectId, Mode, QuizResultRecord, QuestionCount } from '@/types';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -20,6 +18,7 @@ export default function App() {
 
   const [subject, setSubject] = useState<SubjectId | null>(null);
   const [topic, setTopic] = useState<string | null>(null);
+  const [questionCount, setQuestionCount] = useState<QuestionCount>(3);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [error, setError] = useState<string>('');
   const [result, setResult] = useState({ score: 0, correct: 0, incorrect: 0, total: 0, timeUsed: 0 });
@@ -38,6 +37,10 @@ export default function App() {
     setTopic(null);
   };
 
+  const setCount = (count: QuestionCount) => {
+    setQuestionCount(count);
+  };
+
   const startQuiz = (qs: Question[]) => {
     if (qs.length === 0) {
       setError('Для обраної теми немає питань. Спробуйте іншу тему або «Випадковий спринт».');
@@ -51,12 +54,12 @@ export default function App() {
 
   const handleStart = () => {
     if (!subject) return;
-    const qs = getQuestionsFor(subject, topic, QUESTIONS_PER_SPRINT);
+    const qs = getQuestionsFor(subject, topic, questionCount);
     startQuiz(qs);
   };
 
   const handleRandomSprint = () => {
-    const qs = getRandomSprint(QUESTIONS_PER_SPRINT);
+    const qs = getRandomSprint(questionCount);
     startQuiz(qs);
   };
 
@@ -118,6 +121,8 @@ export default function App() {
           subjects={subjects}
           selectedSubject={subject}
           selectedTopic={topic}
+          questionCount={questionCount}
+          setQuestionCount={setCount}
           onSelectSubject={handleSelectSubject}
           onSelectTopic={setTopic}
           onStart={handleStart}

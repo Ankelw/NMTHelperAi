@@ -26,6 +26,8 @@ export interface Subject {
   topics: string[];
 }
 
+export type QuestionCount = 3 | 5 | 10;
+
 export type Screen = 'home' | 'quiz' | 'result' | 'error';
 
 export interface OpenRouterSettings {

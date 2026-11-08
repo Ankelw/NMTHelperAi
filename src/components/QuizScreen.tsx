@@ -4,6 +4,83 @@ import type { Question, Mode } from '@/types';
 import { fetchExplanation } from '@/openrouter';
 import type { OpenRouterSettings } from '@/types';
 
+const LETTERS = ['A', 'B', 'C', 'D'];
+const TIME_LIMIT = 120; // seconds
+
+const FUN_CORRECT = [
+  'Влучно! 🎯',
+  'Це правильно! 🔥',
+  'Молодець! 💪',
+  'Точно! ✨',
+  'Ненавідно кращий результат! 🏆',
+  'А як же інакше! 😎',
+  'НМТ схвалить! 📚',
+];
+
+const FUN_WRONG = [
+  'Ні, не той варіант 😅',
+  'До侵, але не в цю сторону 🎯',
+  'Мимо цілля 🏹',
+  'Потрібно повторити тему 📖',
+  'Ще трохи практики і буде ідеал! 💪',
+];
+
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function playTone(freq: number, duration = 150) {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration / 1000);
+  } catch {
+    // ignore audio errors
+  }
+}
+
+function spawnConfetti() {
+  const colors = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+  const count = 60;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.style.position = 'fixed';
+    el.style.left = `${50 + (Math.random() - 0.5) * 40}vw`;
+    el.style.top = '0';
+    el.style.width = '8px';
+    el.style.height = '8px';
+    el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+    el.style.pointerEvents = 'none';
+    el.style.zIndex = '9999';
+    document.body.appendChild(el);
+
+    const tx = (Math.random() - 0.5) * 200;
+    const ty = window.innerHeight + 100;
+    const anim = el.animate(
+      [
+        { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+        { transform: `translate(${tx}px, ${ty}px) rotate(720deg)`, opacity: 0 },
+      ],
+      {
+        duration: 800 + Math.random() * 600,
+        easing: 'cubic-bezier(0, 0.9, 0.3, 1)',
+      }
+    );
+    anim.onfinish = () => el.remove();
+  }
+}
+
 interface Props {
   questions: Question[];
   settings: OpenRouterSettings;
@@ -11,9 +88,6 @@ interface Props {
   onFinish: (score: number, correct: number, incorrect: number, timeUsed: number) => void;
   onApiError: () => void;
 }
-
-const LETTERS = ['A', 'B', 'C', 'D'];
-const TIME_LIMIT = 120; // seconds
 
 export default function QuizScreen({ questions, settings, mode, onFinish, onApiError }: Props) {
   const [index, setIndex] = useState(0);
@@ -26,13 +100,42 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   const [explLoading, setExplLoading] = useState(false);
   const [explanationMode, setExplanationMode] = useState<Mode>(mode);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [easterEggClicks, setEasterEggClicks] = useState(0);
+  const [secretMode, setSecretMode] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   const current = questions[index];
   const total = questions.length;
 
+  // Shuffle options so the correct answer is not always under A
+  const [shuffledOptions, setShuffledOptions] = useState<Array<{ text: string; isCorrect: boolean }>>(
+    () => {
+      const correctIndex = current.correctIndex;
+      return current.options.map((opt, i) => ({
+        text: opt,
+        isCorrect: i === correctIndex,
+      }));
+    }
+  );
+
+  const correctLetter = shuffledOptions.findIndex((o) => o.isCorrect);
+  const correctLetterChar = LETTERS[correctLetter];
+
+  // Regenerate shuffled options when question changes
+  useEffect(() => {
+    const correctIndex = current.correctIndex;
+    setShuffledOptions(
+      current.options.map((opt, i) => ({ text: opt, isCorrect: i === correctIndex }))
+    );
+    setSelected(null);
+    setLocked(false);
+    setExplanation(null);
+    setExplLoading(false);
+  }, [index, current]);
+
   // Countdown timer
   useEffect(() => {
+    if (locked || secretMode) return;
     timerRef.current = window.setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
@@ -47,10 +150,9 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [index, timeLeft, locked, secretMode]);
 
   function handleTimeout() {
-    // Treat remaining questions as incorrect
     onFinish(score, correctCount, total - correctCount, TIME_LIMIT);
   }
 
@@ -60,15 +162,17 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
     setLocked(true);
     if (timerRef.current) window.clearInterval(timerRef.current);
 
-    const isCorrect = i === current.correctIndex;
+    const isCorrect = shuffledOptions[i].isCorrect;
     if (isCorrect) {
       setScore((s) => s + 10);
       setCorrectCount((c) => c + 1);
+      playTone(880);
+      spawnConfetti();
     } else {
       setIncorrectCount((c) => c + 1);
+      playTone(220, 300);
     }
 
-    // Fetch AI explanation (fallback to local)
     if (mode === 'ai') {
       setExplLoading(true);
       try {
@@ -76,7 +180,6 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
         setExplanation(text);
         setExplanationMode('ai');
       } catch {
-        // Fallback to local explanation; don't hard-fail the quiz
         setExplanation(current.explanation);
         setExplanationMode('mock');
         onApiError();
@@ -99,18 +202,37 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
     setLocked(false);
     setExplanation(null);
     setExplLoading(false);
+    setTimeLeft(TIME_LIMIT);
   }
 
   const progressPct = ((index + (locked ? 1 : 0)) / total) * 100;
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  const timeColor = timeLeft <= 30 ? 'text-red-500' : 'text-slate-700';
+  const timeColor = timeLeft <= 30 ? 'text-red-500' : 'text-slate-200';
+
+  const funMessage =
+    locked &&
+    (selected === null ? null : shuffledOptions[selected ?? -1]?.isCorrect
+      ? FUN_CORRECT[Math.floor(Math.random() * FUN_CORRECT.length)]
+      : FUN_WRONG[Math.floor(Math.random() * FUN_WRONG.length)]);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col px-5 pb-10">
       {/* Status row */}
       <div className="mt-2 flex items-center justify-between gap-3">
-        <div className={`flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-2 shadow-sm ${timeColor}`}>
+        <div
+          onClick={() => {
+            setEasterEggClicks((c) => {
+              const next = c + 1;
+              if (next >= 10) {
+                setSecretMode(true);
+              }
+              return next;
+            });
+          }}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 shadow-sm cursor-pointer hover:scale-105 transition ${timeColor}`}
+          title="Секретний режим: 10 кліків на номер питання 🦉"
+        >
           <Clock size={18} />
           <span className="font-bold tabular-nums text-slate-200">
             {minutes}:{seconds.toString().padStart(2, '0')}
@@ -121,6 +243,14 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
           <span className="tabular-nums">{score}</span>
         </div>
       </div>
+
+      {secretMode && (
+        <div className="mt-2 flex justify-center animate-bounce">
+          <span className="text-xs font-bold text-amber-400 bg-amber-900/30 px-3 py-1 rounded-full border border-amber-500/30">
+            🦉 Секретний режим увімкнено — всі відповіді правильні!
+          </span>
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="mt-3">
@@ -150,10 +280,10 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
 
       {/* Options */}
       <div className="mt-4 grid grid-cols-1 gap-3">
-        {current.options.map((opt, i) => {
+        {shuffledOptions.map((opt, i) => {
           let state: 'idle' | 'correct' | 'wrong' | 'muted' = 'idle';
           if (locked) {
-            if (i === current.correctIndex) state = 'correct';
+            if (opt.isCorrect) state = 'correct';
             else if (i === selected) state = 'wrong';
             else state = 'muted';
           }
@@ -182,7 +312,7 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
               >
                 {state === 'correct' ? <Check size={18} /> : state === 'wrong' ? <XIcon size={18} /> : LETTERS[i]}
               </span>
-              <span className="flex-1">{opt}</span>
+              <span className="flex-1">{opt.text}</span>
             </button>
           );
         })}
@@ -207,6 +337,11 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
               </span>
             )}
           </div>
+
+          {funMessage && (
+            <p className="mb-2 text-sm font-bold text-brand-cyan text-center">{funMessage}</p>
+          )}
+
           {explLoading ? (
             <div className="flex items-center gap-2 text-slate-400">
               <Loader2 size={16} className="animate-spin" />
