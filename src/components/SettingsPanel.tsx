@@ -17,13 +17,35 @@ export default function SettingsPanel({ open, settings, onClose, onSave }: Props
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const [modelError, setModelError] = useState<string | null>(null);
 
   if (!open) return null;
 
   // Determine whether current model value matches a preset option
   const isPreset = MODEL_OPTIONS.some((m) => m.id === model);
 
+  // Validate fields; returns true when everything is OK.
+  const validate = (requireKey: boolean): boolean => {
+    const key = apiKey.trim();
+    let kErr: string | null = null;
+    let mErr: string | null = null;
+    if (!key) {
+      if (requireKey) kErr = 'Введіть API-ключ — поле не може бути порожнім.';
+    } else if (!key.startsWith('sk-or-')) {
+      kErr = 'Ключ OpenRouter має починатися з «sk-or-».';
+    }
+    if ((customModel || !isPreset) && !model.trim()) {
+      mErr = 'Вкажіть назву моделі у форматі vendor/model-name.';
+    }
+    setKeyError(kErr);
+    setModelError(mErr);
+    return !kErr && !mErr;
+  };
+
   const handleSave = () => {
+    // An empty key is allowed on save (Mock mode), but a malformed one is not.
+    if (!validate(false)) return;
     const next = { apiKey: apiKey.trim(), model: model.trim() || DEFAULT_MODEL };
     saveSettings(next);
     onSave(next);
@@ -35,12 +57,15 @@ export default function SettingsPanel({ open, settings, onClose, onSave }: Props
     setApiKey('');
     setModel(DEFAULT_MODEL);
     setTestResult(null);
+    setKeyError(null);
+    setModelError(null);
     const next = { apiKey: '', model: DEFAULT_MODEL };
     saveSettings(next);
     onSave(next);
   };
 
   const handleTest = async () => {
+    if (!validate(true)) return;
     setTesting(true);
     setTestResult(null);
     const result = await testModel(apiKey, model.trim() || DEFAULT_MODEL);
@@ -81,13 +106,21 @@ export default function SettingsPanel({ open, settings, onClose, onSave }: Props
               onChange={(e) => {
                 setApiKey(e.target.value);
                 setTestResult(null);
+                setKeyError(null);
               }}
               placeholder="sk-or-v1-..."
-              className="w-full rounded-xl border-2 border-slate-600 px-4 py-3 text-slate-200 outline-none transition focus:border-brand-cyan bg-slate-800"
+              aria-invalid={!!keyError}
+              className={`w-full rounded-xl border-2 px-4 py-3 text-slate-200 outline-none transition bg-slate-800 ${
+                keyError ? 'border-red-500 focus:border-red-500' : 'border-slate-600 focus:border-brand-cyan'
+              }`}
             />
-            <p className="mt-1.5 text-xs text-slate-400">
-              Зберігається лише у вашому браузері (localStorage).
-            </p>
+            {keyError ? (
+              <p className="mt-1.5 text-xs font-semibold text-red-400">{keyError}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-slate-400">
+                Зберігається лише у вашому браузері (localStorage).
+              </p>
+            )}
           </div>
 
           {/* Model selector */}
@@ -105,16 +138,24 @@ export default function SettingsPanel({ open, settings, onClose, onSave }: Props
                   onChange={(e) => {
                     setModel(e.target.value);
                     setTestResult(null);
+                    setModelError(null);
                   }}
                   placeholder="vendor/model-name"
-                  className="w-full rounded-xl border-2 border-slate-600 px-4 py-3 text-slate-200 outline-none transition focus:border-brand-purple bg-slate-800"
+                  aria-invalid={!!modelError}
+                  className={`w-full rounded-xl border-2 px-4 py-3 text-slate-200 outline-none transition bg-slate-800 ${
+                    modelError ? 'border-red-500 focus:border-red-500' : 'border-slate-600 focus:border-brand-purple'
+                  }`}
                 />
+                {modelError && (
+                  <p className="mt-1.5 text-xs font-semibold text-red-400">{modelError}</p>
+                )}
                 {MODEL_OPTIONS.length > 0 && (
                   <button
                     onClick={() => {
                       setCustomModel(false);
                       setModel(selectedOption?.id ?? DEFAULT_MODEL);
                       setTestResult(null);
+                      setModelError(null);
                     }}
                     className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-purple hover:underline"
                   >
@@ -175,7 +216,7 @@ export default function SettingsPanel({ open, settings, onClose, onSave }: Props
           </div>
 
           {/* Test button + result */}
-          <div className="rounded-2xl bg-slate-50 p-4">
+          <div className="rounded-2xl bg-slate-800/60 p-4">
             <button
               onClick={handleTest}
               disabled={testing}
