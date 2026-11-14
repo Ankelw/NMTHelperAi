@@ -1,4 +1,6 @@
-import { Trophy, RotateCcw, Home, Star, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Trophy, RotateCcw, Home, Star, Clock, Share2 } from 'lucide-react';
+import type { QuizResultRecord } from '@/types';
 
 interface Props {
   score: number;
@@ -7,6 +9,7 @@ interface Props {
   incorrect: number;
   totalQuestions: number;
   timeUsed: number; // seconds spent on the sprint
+  subject: QuizResultRecord['subject'];
   onRetry: () => void;
   onHome: () => void;
 }
@@ -44,15 +47,38 @@ export default function ResultScreen({
   incorrect,
   totalQuestions,
   timeUsed,
+  subject,
   onRetry,
   onHome,
 }: Props) {
+  const [shareStatus, setShareStatus] = useState('');
   const pct = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
   const m = getMotivation(pct);
   const stars = pct >= 80 ? 3 : pct >= 50 ? 2 : pct >= 20 ? 1 : 0;
   const mins = Math.floor(timeUsed / 60);
   const secs = timeUsed % 60;
   const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+  async function shareResult() {
+    const subjects: Record<Exclude<QuizResultRecord['subject'], 'random'>, string> = {
+      history: 'історії України',
+      ukrainian: 'української мови',
+      math: 'математики',
+      english: 'англійської мови',
+      biology: 'біології',
+      chemistry: 'хімії',
+      physics: 'фізики',
+      geography: 'географії',
+      literature: 'української літератури',
+    };
+    const subjectText = subject === 'random' ? 'у випадковому спринті' : `з ${subjects[subject]}`;
+    try {
+      await navigator.clipboard.writeText(`Я набрав ${pct}% ${subjectText} в NMT Sprint Tutor 🦉`);
+      setShareStatus('Результат скопійовано!');
+    } catch {
+      setShareStatus('Не вдалося скопіювати результат.');
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-xl flex-col px-5 pb-10 pt-6">
@@ -112,6 +138,16 @@ export default function ResultScreen({
         <p className="text-lg font-extrabold tabular-nums text-slate-100">{timeStr}</p>
         <p className="text-xs font-bold text-slate-300">Витрачено часу</p>
       </div>
+
+      <button
+        type="button"
+        onClick={shareResult}
+        className="mt-3 flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-800 px-4 py-3 font-bold text-slate-200 transition hover:bg-slate-700 active:scale-95"
+      >
+        <Share2 size={18} />
+        Поділитися результатом
+      </button>
+      {shareStatus && <p className="mt-2 text-center text-xs font-semibold text-slate-400">{shareStatus}</p>}
 
       {/* Buttons */}
       <div className="mt-6 flex flex-col gap-3">

@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, X as XIcon, Clock, Trophy, ChevronRight, Loader2, Bot, WifiOff } from 'lucide-react';
-import type { Question, Mode } from '@/types';
+import {
+  Check,
+  X as XIcon,
+  Clock,
+  Trophy,
+  ChevronRight,
+  Loader2,
+  Bot,
+  WifiOff,
+  Percent,
+  Bookmark,
+  BookmarkCheck,
+} from 'lucide-react';
+import type { Question, QuestionOutcome, Mode } from '@/types';
 import { fetchExplanation } from '@/openrouter';
 import type { OpenRouterSettings } from '@/types';
 
@@ -85,11 +97,27 @@ interface Props {
   questions: Question[];
   settings: OpenRouterSettings;
   mode: Mode;
-  onFinish: (score: number, correct: number, incorrect: number, timeUsed: number) => void;
+  savedQuestionIds: string[];
+  onFinish: (
+    score: number,
+    correct: number,
+    incorrect: number,
+    timeUsed: number,
+    outcomes: QuestionOutcome[],
+  ) => void;
   onApiError: () => void;
+  onToggleSavedQuestion: (question: Question) => void;
 }
 
-export default function QuizScreen({ questions, settings, mode, onFinish, onApiError }: Props) {
+export default function QuizScreen({
+  questions,
+  settings,
+  mode,
+  savedQuestionIds,
+  onFinish,
+  onApiError,
+  onToggleSavedQuestion,
+}: Props) {
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -102,8 +130,11 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
   const [easterEggClicks, setEasterEggClicks] = useState(0);
   const [secretMode, setSecretMode] = useState(false);
+  const [fiftyFiftyUsed, setFiftyFiftyUsed] = useState(false);
+  const [hiddenOptions, setHiddenOptions] = useState<number[]>([]);
   const timerRef = useRef<number | null>(null);
   const elapsedTimeRef = useRef(0);
+  const outcomesRef = useRef(new Map<string, QuestionOutcome>());
 
   const current = questions[index];
   const total = questions.length;
@@ -132,6 +163,7 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
     setLocked(false);
     setExplanation(null);
     setExplLoading(false);
+    setHiddenOptions([]);
   }, [index, current]);
 
   // Countdown timer
@@ -154,16 +186,44 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   }, [index, timeLeft, locked, secretMode]);
 
   function handleTimeout() {
-    onFinish(score, correctCount, total - correctCount, elapsedTimeRef.current + TIME_LIMIT);
+    finishQuiz(score, correctCount, total - correctCount, elapsedTimeRef.current + TIME_LIMIT);
+  }
+
+  function finishQuiz(scoreValue: number, correct: number, incorrect: number, timeUsed: number) {
+    const outcomes = questions.map(
+      (question) =>
+        outcomesRef.current.get(question.id) ?? {
+          questionId: question.id,
+          subject: question.subject,
+          correct: false,
+          answered: false,
+        },
+    );
+    onFinish(scoreValue, correct, incorrect, timeUsed, outcomes);
+  }
+
+  function handleFiftyFifty() {
+    if (fiftyFiftyUsed || locked) return;
+    const wrongOptions = shuffledOptions
+      .map((option, optionIndex) => (option.isCorrect ? -1 : optionIndex))
+      .filter((optionIndex) => optionIndex >= 0);
+    setHiddenOptions(shuffle(wrongOptions).slice(0, 2));
+    setFiftyFiftyUsed(true);
   }
 
   async function handleAnswer(i: number) {
-    if (locked) return;
+    if (locked || hiddenOptions.includes(i)) return;
     setSelected(i);
     setLocked(true);
     if (timerRef.current) window.clearInterval(timerRef.current);
 
     const isCorrect = shuffledOptions[i].isCorrect;
+    outcomesRef.current.set(current.id, {
+      questionId: current.id,
+      subject: current.subject,
+      correct: isCorrect,
+      answered: true,
+    });
     if (isCorrect) {
       setScore((s) => s + 10);
       setCorrectCount((c) => c + 1);
@@ -196,7 +256,7 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   function handleNext() {
     const currentQuestionTime = TIME_LIMIT - timeLeft;
     if (index + 1 >= total) {
-      onFinish(score, correctCount, incorrectCount, elapsedTimeRef.current + currentQuestionTime);
+      finishQuiz(score, correctCount, incorrectCount, elapsedTimeRef.current + currentQuestionTime);
       return;
     }
     elapsedTimeRef.current += currentQuestionTime;
@@ -279,11 +339,31 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
           </span>
         </div>
         <p className="text-lg font-bold leading-snug text-slate-100">{current.prompt}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={fiftyFiftyUsed || locked}
+            onClick={handleFiftyFifty}
+            className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 transition hover:border-brand-cyan disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Percent size={16} />
+            {fiftyFiftyUsed ? '50/50 використано' : 'Підказка 50/50'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleSavedQuestion(current)}
+            className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 transition hover:border-brand-cyan"
+          >
+            {savedQuestionIds.includes(current.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+            {savedQuestionIds.includes(current.id) ? 'Збережено' : 'Зберегти питання'}
+          </button>
+        </div>
       </div>
 
       {/* Options */}
       <div className="mt-4 grid grid-cols-1 gap-3">
         {shuffledOptions.map((opt, i) => {
+          if (hiddenOptions.includes(i)) return null;
           let state: 'idle' | 'correct' | 'wrong' | 'muted' = 'idle';
           if (locked) {
             if (opt.isCorrect) state = 'correct';

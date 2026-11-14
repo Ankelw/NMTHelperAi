@@ -27,6 +27,10 @@ interface Props {
   onSelectTopic: (topic: string | null) => void;
   onStart: () => void;
   onRandomSprint: () => void;
+  savedQuestionCount: number;
+  incorrectQuestionCount: number;
+  onStartSaved: () => void;
+  onStartIncorrect: () => void;
   recentResults: QuizResultRecord[];
   streak: number;
   onClearProgress: () => void;
@@ -54,6 +58,10 @@ export default function HomeScreen({
   onSelectTopic,
   onStart,
   onRandomSprint,
+  savedQuestionCount,
+  incorrectQuestionCount,
+  onStartSaved,
+  onStartIncorrect,
   recentResults,
   streak,
   onClearProgress,
@@ -148,6 +156,25 @@ export default function HomeScreen({
         <Shuffle size={20} />
         Випадковий експрес-спринт ({questionCount} питань)
       </button>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          disabled={savedQuestionCount === 0}
+          onClick={onStartSaved}
+          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-800 px-4 py-3 font-bold text-slate-200 transition hover:border-brand-cyan disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Мої збережені питання ({savedQuestionCount})
+        </button>
+        <button
+          type="button"
+          disabled={incorrectQuestionCount === 0}
+          onClick={onStartIncorrect}
+          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-700 bg-slate-800 px-4 py-3 font-bold text-slate-200 transition hover:border-brand-cyan disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Робота над помилками ({incorrectQuestionCount})
+        </button>
+      </div>
 
       {/* Question count selector */}
       <div className="mt-6">

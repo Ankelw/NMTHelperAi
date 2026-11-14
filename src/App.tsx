@@ -5,10 +5,29 @@ import HomeScreen from '@/components/HomeScreen';
 import QuizScreen from '@/components/QuizScreen';
 import ResultScreen from '@/components/ResultScreen';
 import ErrorScreen from '@/components/ErrorScreen';
-import { SUBJECTS, getQuestionsFor, getRandomSprint } from '@/questions';
+import { QUESTIONS, SUBJECTS, getQuestionsFor, getRandomSprint } from '@/questions';
 import { loadSettings } from '@/openrouter';
-import { saveProgress, getRecentResults, getStreak, createRecord, clearProgress } from '@/progress';
-import type { OpenRouterSettings, Question, Screen, SubjectId, Mode, QuizResultRecord, QuestionCount } from '@/types';
+import {
+  clearProgress,
+  createRecord,
+  getRecentResults,
+  getStreak,
+  loadIncorrectQuestionIds,
+  loadSavedQuestions,
+  saveIncorrectQuestionIds,
+  saveProgress,
+  toggleSavedQuestion,
+} from '@/progress';
+import type {
+  OpenRouterSettings,
+  Question,
+  QuestionOutcome,
+  Screen,
+  SubjectId,
+  Mode,
+  QuizResultRecord,
+  QuestionCount,
+} from '@/types';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -21,9 +40,24 @@ export default function App() {
   const [questionCount, setQuestionCount] = useState<QuestionCount>(3);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [error, setError] = useState<string>('');
-  const [result, setResult] = useState({ score: 0, correct: 0, incorrect: 0, total: 0, timeUsed: 0 });
+  const [result, setResult] = useState({
+    score: 0,
+    correct: 0,
+    incorrect: 0,
+    total: 0,
+    timeUsed: 0,
+    subject: 'random' as QuizResultRecord['subject'],
+  });
   const [recentResults, setRecentResults] = useState<QuizResultRecord[]>([]);
   const [streak, setStreak] = useState(0);
+  const [savedQuestions, setSavedQuestions] = useState<Question[]>(() => loadSavedQuestions());
+  const [incorrectQuestionIds, setIncorrectQuestionIds] = useState<string[]>(() => loadIncorrectQuestionIds());
+  const incorrectQuestions = useMemo(
+    () => incorrectQuestionIds.map((id) => QUESTIONS.find((question) => question.id === id)).filter(
+      (question): question is Question => question !== undefined,
+    ),
+    [incorrectQuestionIds],
+  );
 
   useEffect(() => {
     setRecentResults(getRecentResults(5));
@@ -48,7 +82,14 @@ export default function App() {
       return;
     }
     setQuestions(qs);
-    setResult({ score: 0, correct: 0, incorrect: 0, total: qs.length, timeUsed: 0 });
+    setResult({
+      score: 0,
+      correct: 0,
+      incorrect: 0,
+      total: qs.length,
+      timeUsed: 0,
+      subject: subject ?? 'random',
+    });
     setScreen('quiz');
   };
 
@@ -60,13 +101,38 @@ export default function App() {
 
   const handleRandomSprint = () => {
     const qs = getRandomSprint(questionCount);
+    setSubject(null);
+    setTopic(null);
     startQuiz(qs);
   };
 
-  const handleFinish = (score: number, correct: number, incorrect: number, timeUsed: number) => {
-    setResult({ score, correct, incorrect, total: questions.length, timeUsed });
+  const handleStartFromList = (items: Question[]) => {
+    setSubject(null);
+    setTopic(null);
+    startQuiz(items.slice(0, questionCount));
+  };
+
+  const handleFinish = (
+    score: number,
+    correct: number,
+    incorrect: number,
+    timeUsed: number,
+    outcomes: QuestionOutcome[],
+  ) => {
     const subjectTag: QuizResultRecord['subject'] = subject ?? 'random';
-    saveProgress(createRecord(subjectTag, score, correct, questions.length));
+    setResult({
+      score,
+      correct,
+      incorrect,
+      total: questions.length,
+      timeUsed,
+      subject: subjectTag,
+    });
+    const wrongIds = outcomes.filter((outcome) => outcome.answered && !outcome.correct).map(
+      (outcome) => outcome.questionId,
+    );
+    setIncorrectQuestionIds(saveIncorrectQuestionIds(wrongIds));
+    saveProgress(createRecord(subjectTag, score, correct, questions.length, outcomes));
     setScreen('result');
   };
 
@@ -112,6 +178,10 @@ export default function App() {
     setStreak(0);
   };
 
+  const handleToggleSavedQuestion = (question: Question) => {
+    setSavedQuestions(toggleSavedQuestion(question));
+  };
+
   const bgClass = useMemo(
     () =>
       'min-h-screen bg-gradient-to-b from-slate-950 via-indigo-900 to-slate-950',
@@ -133,6 +203,10 @@ export default function App() {
           onSelectTopic={setTopic}
           onStart={handleStart}
           onRandomSprint={handleRandomSprint}
+          savedQuestionCount={savedQuestions.length}
+          incorrectQuestionCount={incorrectQuestions.length}
+          onStartSaved={() => handleStartFromList(savedQuestions)}
+          onStartIncorrect={() => handleStartFromList(incorrectQuestions)}
           recentResults={recentResults}
           streak={streak}
           onClearProgress={handleClearProgress}
@@ -144,8 +218,10 @@ export default function App() {
           questions={questions}
           settings={settings}
           mode={mode}
+          savedQuestionIds={savedQuestions.map((question) => question.id)}
           onFinish={handleFinish}
           onApiError={handleApiError}
+          onToggleSavedQuestion={handleToggleSavedQuestion}
         />
       )}
 
@@ -157,6 +233,7 @@ export default function App() {
           incorrect={result.incorrect}
           totalQuestions={result.total}
           timeUsed={result.timeUsed}
+          subject={result.subject}
           onRetry={handleRetry}
           onHome={handleHome}
         />

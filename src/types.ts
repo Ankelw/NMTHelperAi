@@ -16,6 +16,14 @@ export interface QuizResultRecord {
   correct: number;
   total: number;
   date: string; // ISO date string
+  questionOutcomes?: QuestionOutcome[];
+}
+
+export interface QuestionOutcome {
+  questionId: string;
+  subject: SubjectId;
+  correct: boolean;
+  answered: boolean;
 }
 
 export interface Question {
@@ -36,6 +44,8 @@ export interface Subject {
 }
 
 export type QuestionCount = 3 | 5 | 10;
+
+export type DailyGoal = 1 | 3 | 5;
 
 export type Screen = 'home' | 'quiz' | 'result' | 'error';
 
