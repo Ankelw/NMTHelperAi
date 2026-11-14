@@ -12,15 +12,15 @@ const FUN_CORRECT = [
   'Це правильно! 🔥',
   'Молодець! 💪',
   'Точно! ✨',
-  'Ненавідно кращий результат! 🏆',
+  'Найкращий результат! 🏆',
   'А як же інакше! 😎',
   'НМТ схвалить! 📚',
 ];
 
 const FUN_WRONG = [
   'Ні, не той варіант 😅',
-  'До侵, але не в цю сторону 🎯',
-  'Мимо цілля 🏹',
+  'Близько, але не в цю сторону 🎯',
+  'Повз ціль 🏹',
   'Потрібно повторити тему 📖',
   'Ще трохи практики і буде ідеал! 💪',
 ];
@@ -109,13 +109,13 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
 
   // Shuffle options so the correct answer is not always under A
   const [shuffledOptions, setShuffledOptions] = useState<Array<{ text: string; isCorrect: boolean }>>(
-    () => {
-      const correctIndex = current.correctIndex;
-      return current.options.map((opt, i) => ({
-        text: opt,
-        isCorrect: i === correctIndex,
-      }));
-    }
+    () =>
+      shuffle(
+        current.options.map((opt, i) => ({
+          text: opt,
+          isCorrect: i === current.correctIndex,
+        }))
+      )
   );
 
   const correctLetter = shuffledOptions.findIndex((o) => o.isCorrect);
@@ -125,7 +125,7 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   useEffect(() => {
     const correctIndex = current.correctIndex;
     setShuffledOptions(
-      current.options.map((opt, i) => ({ text: opt, isCorrect: i === correctIndex }))
+      shuffle(current.options.map((opt, i) => ({ text: opt, isCorrect: i === correctIndex })))
     );
     setSelected(null);
     setLocked(false);
