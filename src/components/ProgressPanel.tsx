@@ -12,6 +12,11 @@ const SUBJECT_LABELS: Record<string, string> = {
   ukrainian: 'Українська мова',
   math: 'Математика',
   english: 'Англійська мова',
+  biology: 'Біологія',
+  chemistry: 'Хімія',
+  physics: 'Фізика',
+  geography: 'Географія',
+  literature: 'Українська література',
   random: 'Випадковий спринт',
 };
 

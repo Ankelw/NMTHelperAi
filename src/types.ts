@@ -1,4 +1,13 @@
-export type SubjectId = 'history' | 'ukrainian' | 'math' | 'english';
+export type SubjectId =
+  | 'history'
+  | 'ukrainian'
+  | 'math'
+  | 'english'
+  | 'biology'
+  | 'chemistry'
+  | 'physics'
+  | 'geography'
+  | 'literature';
 
 export interface QuizResultRecord {
   id: string;

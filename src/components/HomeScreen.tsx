@@ -1,4 +1,19 @@
-import { Sparkles, Shuffle, Landmark, BookOpen, Calculator, Globe, Play, ChevronRight, type LucideIcon } from 'lucide-react';
+import {
+  Sparkles,
+  Shuffle,
+  Landmark,
+  BookOpen,
+  Calculator,
+  Globe,
+  Leaf,
+  FlaskConical,
+  Atom,
+  Map,
+  BookMarked,
+  Play,
+  ChevronRight,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Subject, SubjectId, QuizResultRecord, QuestionCount } from '@/types';
 import ProgressPanel from '@/components/ProgressPanel';
 
@@ -22,6 +37,11 @@ const ICONS: Record<string, LucideIcon> = {
   BookOpen,
   Calculator,
   Globe,
+  Leaf,
+  FlaskConical,
+  Atom,
+  Map,
+  BookMarked,
 };
 
 export default function HomeScreen({
@@ -58,7 +78,7 @@ export default function HomeScreen({
       {/* Subject picker */}
       <div className="mt-6">
         <p className="mb-3 text-sm font-bold text-slate-300">Оберіть предмет</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {subjects.map((s) => {
             const Icon = ICONS[s.icon] ?? Sparkles;
             const active = selectedSubject === s.id;
