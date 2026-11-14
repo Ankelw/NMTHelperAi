@@ -1,9 +1,10 @@
-import { Flame, TrendingUp, Award } from 'lucide-react';
+import { Flame, TrendingUp, Award, RotateCcw } from 'lucide-react';
 import type { QuizResultRecord } from '@/types';
 
 interface Props {
   recent: QuizResultRecord[];
   streak: number;
+  onClear: () => void;
 }
 
 const SUBJECT_LABELS: Record<string, string> = {
@@ -23,25 +24,39 @@ function formatDate(iso: string): string {
   return `${day}.${month} ${hh}:${mm}`;
 }
 
-export default function ProgressPanel({ recent, streak }: Props) {
+export default function ProgressPanel({ recent, streak, onClear }: Props) {
   if (recent.length === 0 && streak === 0) return null;
 
   return (
     <div className="mt-8 animate-slideUp">
-      <p className="mb-3 text-sm font-bold text-slate-300">Мій прогрес</p>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm font-bold text-slate-300">Мій прогрес</p>
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Очистити історію результатів і серію днів?')) onClear();
+          }}
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+        >
+          <RotateCcw size={14} />
+          Скинути прогрес
+        </button>
+      </div>
 
       {/* Streak card */}
-      <div className="mb-3 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-orange-900/20 to-amber-900/20 p-4 shadow-sm">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md">
-          <Flame size={24} />
+      {streak > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-orange-900/20 to-amber-900/20 p-4 shadow-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-md">
+            <Flame size={24} />
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-slate-100">
+              {streak} {streak === 1 ? 'день' : streak < 5 ? 'дні' : 'днів'} поспіль
+            </p>
+            <p className="text-xs font-bold text-orange-400">Так тримати!</p>
+          </div>
         </div>
-        <div>
-          <p className="text-2xl font-extrabold text-slate-100">
-            {streak} {streak === 1 ? 'день' : streak < 5 ? 'дні' : 'днів'} поспіль
-          </p>
-          <p className="text-xs font-bold text-orange-400">Так тримати!</p>
-        </div>
-      </div>
+      )}
 
       {/* Recent results */}
       {recent.length > 0 && (

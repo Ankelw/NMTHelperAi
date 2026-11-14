@@ -14,6 +14,7 @@ interface Props {
   onRandomSprint: () => void;
   recentResults: QuizResultRecord[];
   streak: number;
+  onClearProgress: () => void;
 }
 
 const ICONS: Record<string, LucideIcon> = {
@@ -35,6 +36,7 @@ export default function HomeScreen({
   onRandomSprint,
   recentResults,
   streak,
+  onClearProgress,
 }: Props) {
   const activeSubject = subjects.find((s) => s.id === selectedSubject) ?? null;
 
@@ -167,7 +169,7 @@ export default function HomeScreen({
         </p>
       )}
 
-      <ProgressPanel recent={recentResults} streak={streak} />
+      <ProgressPanel recent={recentResults} streak={streak} onClear={onClearProgress} />
     </div>
   );
 }

@@ -103,6 +103,7 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   const [easterEggClicks, setEasterEggClicks] = useState(0);
   const [secretMode, setSecretMode] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const elapsedTimeRef = useRef(0);
 
   const current = questions[index];
   const total = questions.length;
@@ -153,7 +154,7 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   }, [index, timeLeft, locked, secretMode]);
 
   function handleTimeout() {
-    onFinish(score, correctCount, total - correctCount, TIME_LIMIT);
+    onFinish(score, correctCount, total - correctCount, elapsedTimeRef.current + TIME_LIMIT);
   }
 
   async function handleAnswer(i: number) {
@@ -193,10 +194,12 @@ export default function QuizScreen({ questions, settings, mode, onFinish, onApiE
   }
 
   function handleNext() {
+    const currentQuestionTime = TIME_LIMIT - timeLeft;
     if (index + 1 >= total) {
-      onFinish(score, correctCount, incorrectCount, TIME_LIMIT - timeLeft);
+      onFinish(score, correctCount, incorrectCount, elapsedTimeRef.current + currentQuestionTime);
       return;
     }
+    elapsedTimeRef.current += currentQuestionTime;
     setIndex((n) => n + 1);
     setSelected(null);
     setLocked(false);

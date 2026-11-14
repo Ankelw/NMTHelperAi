@@ -27,6 +27,10 @@ export function saveProgress(record: QuizResultRecord): QuizResultRecord[] {
   return trimmed;
 }
 
+export function clearProgress(): void {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
 export function getRecentResults(count: number): QuizResultRecord[] {
   const all = loadProgress();
   return all.slice(-count).reverse();

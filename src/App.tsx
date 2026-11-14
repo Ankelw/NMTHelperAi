@@ -7,7 +7,7 @@ import ResultScreen from '@/components/ResultScreen';
 import ErrorScreen from '@/components/ErrorScreen';
 import { SUBJECTS, getQuestionsFor, getRandomSprint } from '@/questions';
 import { loadSettings } from '@/openrouter';
-import { saveProgress, getRecentResults, getStreak, createRecord } from '@/progress';
+import { saveProgress, getRecentResults, getStreak, createRecord, clearProgress } from '@/progress';
 import type { OpenRouterSettings, Question, Screen, SubjectId, Mode, QuizResultRecord, QuestionCount } from '@/types';
 
 export default function App() {
@@ -106,6 +106,12 @@ export default function App() {
     setMode(s.apiKey.trim() ? 'ai' : 'mock');
   };
 
+  const handleClearProgress = () => {
+    clearProgress();
+    setRecentResults([]);
+    setStreak(0);
+  };
+
   const bgClass = useMemo(
     () =>
       'min-h-screen bg-gradient-to-b from-slate-950 via-indigo-900 to-slate-950',
@@ -129,6 +135,7 @@ export default function App() {
           onRandomSprint={handleRandomSprint}
           recentResults={recentResults}
           streak={streak}
+          onClearProgress={handleClearProgress}
         />
       )}
 
