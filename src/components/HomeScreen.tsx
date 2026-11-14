@@ -46,7 +46,7 @@ export default function HomeScreen({
           🦉
         </div>
         <h2 className="text-2xl font-extrabold leading-tight text-slate-100">
-          Пройди 3 швидкі питання
+          Пройди {questionCount} швидких питань
         </h2>
         <p className="mt-1 text-base font-medium text-slate-400">
           до НМТ за 2 хвилини — без нудних підручників.
@@ -124,7 +124,7 @@ export default function HomeScreen({
         className="mt-6 flex items-center justify-center gap-2 rounded-2xl border-2 border-brand-purple bg-gradient-to-r from-brand-purple to-brand-cyan px-4 py-4 font-bold text-white shadow-lg shadow-purple-500/25 transition hover:opacity-90 active:scale-95"
       >
         <Shuffle size={20} />
-        Випадковий експрес-спринт (3 питання)
+        Випадковий експрес-спринт ({questionCount} питань)
       </button>
 
       {/* Question count selector */}
@@ -154,7 +154,7 @@ export default function HomeScreen({
         className={`mt-4 flex items-center justify-center gap-2 rounded-2xl px-6 py-5 text-lg font-extrabold transition active:scale-95 ${
           activeSubject
             ? 'bg-gradient-to-r from-brand-cyan to-brand-purple text-white shadow-xl shadow-cyan-500/30 hover:opacity-90'
-            : 'cursor-not-allowed bg-slate-200 text-slate-400'
+            : 'cursor-not-allowed bg-slate-700 text-slate-400'
         }`}
       >
         <Play size={22} fill="currentColor" />
