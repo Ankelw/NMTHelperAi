@@ -79,15 +79,15 @@ export default function App() {
     setMode('mock');
     // Re-run with the same subject/topic, or random if none selected.
     const qs =
-      subject !== null ? getQuestionsFor(subject, topic, QUESTIONS_PER_SPRINT) : getRandomSprint(QUESTIONS_PER_SPRINT);
+      subject !== null ? getQuestionsFor(subject, topic, questionCount) : getRandomSprint(questionCount);
     startQuiz(qs);
   };
 
   const handleRetry = () => {
     if (subject !== null) {
-      startQuiz(getQuestionsFor(subject, topic, QUESTIONS_PER_SPRINT));
+      startQuiz(getQuestionsFor(subject, topic, questionCount));
     } else {
-      startQuiz(getRandomSprint(QUESTIONS_PER_SPRINT));
+      startQuiz(getRandomSprint(questionCount));
     }
   };
 

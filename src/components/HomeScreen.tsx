@@ -27,6 +27,8 @@ export default function HomeScreen({
   subjects,
   selectedSubject,
   selectedTopic,
+  questionCount,
+  setQuestionCount,
   onSelectSubject,
   onSelectTopic,
   onStart,
